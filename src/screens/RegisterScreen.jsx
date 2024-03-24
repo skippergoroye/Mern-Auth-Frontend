@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Form, Button, Row, Col } from 'react-bootstrap';
-import FormContainer from '../components/FormContainer';
-
-
-
-
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Form, Button, Row, Col } from "react-bootstrap";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
+import FormContainer from "../components/FormContainer";
+import Loader from "../components/Loader";
+import { useRegisterMutation } from "../features/api/users";
+import { setCredentials } from "../features/auth/authSlice";
 
 const RegisterScreen = () => {
   const [name, setName] = useState("");
@@ -13,9 +14,32 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const { userInfo } = useSelector((state) => state.auth);
+  const [register, { isLoading }] = useRegisterMutation();
+
+  useEffect(() => {
+    if (userInfo) {
+      navigate("/");
+    }
+  }, [navigate, userInfo]);
+
   const submitHandler = async (e) => {
     e.preventDefault();
-    console.log("submit");
+    if (password !== confirmPassword) {
+      toast.error("Password do not match");
+    } else {
+      try {
+        const res = await register({ name, email, password }).unwrap();
+        dispatch(setCredentials({ ...res })); // set the user into local storage
+        navigate("/");
+      } catch (err) {
+        toast.error(err?.data?.message || err.error);
+        // console.log(err?.data?.message || err.error);
+      }
+    }
   };
 
   return (
@@ -56,7 +80,7 @@ const RegisterScreen = () => {
           ></Form.Control>
         </Form.Group>
 
-       {/* confirmPassword */}
+        {/* confirmPassword */}
         <Form.Group className="my-2" controlId="confirmPassword">
           <Form.Label>Confirm Password</Form.Label>
           <Form.Control
@@ -68,15 +92,16 @@ const RegisterScreen = () => {
         </Form.Group>
 
         <Button type="submit" variant="primary" className="mt-3">
-          Sign Up
+          Register
         </Button>
-
-        <Row className="py-3">
-          <Col>
-            Already have an account? <Link to="/login">Login</Link>
-          </Col>
-        </Row>
       </Form>
+      {isLoading && <Loader />}
+
+      <Row className="py-3">
+        <Col>
+          Already have an account? <Link to="/login">Login</Link>
+        </Col>
+      </Row>
     </FormContainer>
   );
 };
